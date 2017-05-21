@@ -19,3 +19,4 @@ A pure python, post-exploitation, remote administration tool (RAT) for macOS / O
 ## Thanks
 * "Bella" created by [manwhoami](https://github.com/manwhoami)
 * "OSXChromeDecrypt" created by [manwhoami](https://github.com/manwhoami/OSXChromeDecrypt)
+* "MMeTokenDecrypt" created by [manwhoami](https://github.com/manwhoami/MMeTokenDecrypt)
