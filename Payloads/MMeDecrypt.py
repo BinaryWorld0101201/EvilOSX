@@ -7,7 +7,6 @@ import glob
 import os
 import binascii
 import json
-import csv
 from Foundation import NSData, NSPropertyListSerialization
 
 
@@ -38,7 +37,7 @@ if __name__ == '__main__':
     msg = base64.b64decode(icloud_key)
     key = "t9s\"lx^awe.580Gj%'ld+0LG<#9xa?>vb)-fkwb92[}"  # Constant key used for hashing Hmac on all versions of macOS.
 
-    # Create Hmac with this key and icloud_key using md5
+    # Create Hmac with this key and icloud_key using MD5
     hashed = hmac.new(key, msg, digestmod=hashlib.md5).digest()
     hexed_key = binascii.hexlify(hashed)  # Turn into hex for openssl subprocess
     IV = 16 * '0'
@@ -46,7 +45,7 @@ if __name__ == '__main__':
 
     for x in mme_token_file:
         try:
-            int(x.split("/")[-1])  # If we can cast to int, that means we have the DSID / account file.
+            int(x.split("/")[-1])  # If we can cast to int we have the DSID / account file.
             mme_token_file = x
         except ValueError:
             continue

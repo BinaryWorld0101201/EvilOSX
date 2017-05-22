@@ -6,6 +6,7 @@ A pure python, post-exploitation, remote administration tool (RAT) for macOS / O
 * Sockets are encrypted with [CSR](https://en.wikipedia.org/wiki/Certificate_signing_request#Procedure) via OpenSSL.
 * No dependencies (pure python).
 * Persistence.
+* Retrieve Chrome passwords.
 * Auto installer, simply run EvilOSX on the target and the rest is handled automatically.
 
 ## Usage
@@ -17,6 +18,5 @@ A pure python, post-exploitation, remote administration tool (RAT) for macOS / O
    ![](http://i.imgur.com/lPsRN4w.png)
    
 ## Thanks
-* "Bella" created by [manwhoami](https://github.com/manwhoami)
-* "OSXChromeDecrypt" created by [manwhoami](https://github.com/manwhoami/OSXChromeDecrypt)
-* "MMeTokenDecrypt" created by [manwhoami](https://github.com/manwhoami/MMeTokenDecrypt)
+* [OSXChromeDecrypt](https://github.com/manwhoami/OSXChromeDecrypt)  created by manwhoami
+* [MMeTokenDecrypt](https://github.com/manwhoami/MMeTokenDecrypt) created by manwhoami
