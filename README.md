@@ -20,3 +20,4 @@ A pure python, post-exploitation, remote administration tool (RAT) for macOS / O
 ## Thanks
 * [OSXChromeDecrypt](https://github.com/manwhoami/OSXChromeDecrypt)  created by manwhoami
 * [MMeTokenDecrypt](https://github.com/manwhoami/MMeTokenDecrypt) created by manwhoami
+* [iCloudContacts](https://github.com/manwhoami/iCloudContacts) created by manwhoami
