@@ -1,3 +1,4 @@
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0) ![](https://img.shields.io/badge/platform-macOS%20%2F%20OS%20X-blue.svg)
 # EvilOSX
 A pure python, post-exploitation, remote administration tool (RAT) for macOS / OS X.
 
