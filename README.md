@@ -8,6 +8,9 @@ A pure python, post-exploitation, remote administration tool (RAT) for macOS / O
 * Persistence.
 * Retrieve Chrome passwords.
 * Retrieve iCloud contacts.
+* Retrieve find my iphone devices.
+* Attempt to get root via local privilege escalation (< 10.10.5).
+* Attempt to get iCloud password via [phishing](http://i.imgur.com/wEqF5aa.png).
 * Auto installer, simply run EvilOSX on the target and the rest is handled automatically.
 
 ## Usage
