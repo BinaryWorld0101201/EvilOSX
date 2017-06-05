@@ -178,6 +178,9 @@ if __name__ == '__main__':
 
                     command = raw_input((GREEN + "{0}@{1}" + ENDC + ":" + BLUE + "{2}" + ENDC + "$ ").format(username, hostname, path))
 
+            if command.strip() == "":
+                continue
+
             if command.split(" ")[0] in commands:
                 if command == "help":
                     print_help()
