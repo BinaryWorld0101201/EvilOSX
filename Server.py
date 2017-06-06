@@ -45,6 +45,7 @@ def print_help():
     print "icloud_contacts   -  Retrieve iCloud contacts."
     print "icloud_phish      -  Attempt to get iCloud password via phishing."
     print "find_my_iphone    -  Retrieve find my iphone devices."
+    print "screenshot        -  Takes a screenshot of the client."
     print "kill_client       -  Brutally kill the client (removes the server)."
     print "Any other command will be executed on the connected client."
 
