@@ -5,6 +5,10 @@ import ssl
 import thread
 import os
 import struct
+try:
+    import gnureadline
+except ImportError:
+    import readline
 
 BANNER = '''\
   ______       _  _   ____    _____ __   __
