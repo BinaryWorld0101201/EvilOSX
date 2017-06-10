@@ -1,6 +1,6 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0) ![](https://img.shields.io/badge/platform-macOS%20%2F%20OS%20X-blue.svg)
 # EvilOSX
-EvilOSX is a `pure python`, post-exploitation, RAT (Remote Administration Tool) for macOS / OSX.
+EvilOSX is a pure python, post-exploitation, RAT (Remote Administration Tool) for macOS / OSX.
 
 ## Features
 * Emulate a simple terminal instance.
@@ -10,6 +10,7 @@ EvilOSX is a `pure python`, post-exploitation, RAT (Remote Administration Tool) 
 * Retrieve Chrome passwords.
 * Retrieve iCloud contacts.
 * Attempt to get iCloud password via [phishing](http://i.imgur.com/wEqF5aa.png).
+* Show local iOS backups.
 * Retrieve find my iphone devices.
 * Attempt to get root via local privilege escalation (<= 10.10.5).
 * Auto installer, simply run EvilOSX on the target and the rest is handled automatically.
