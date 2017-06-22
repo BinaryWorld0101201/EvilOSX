@@ -41,10 +41,11 @@ def print_clients(server):
         computer_names = []
 
         for client in server.clients:
-            response = client.send_command("get_computer_name")
-
-            if response:
-               computer_names.append(response)
+            try:
+                computer_names.append(client.send_command("get_computer_name"))
+            except socket.error:
+                # Client is no longer connected, that's fine.
+                pass
 
         if not server.clients:
             print MESSAGE_ATTENTION + "No available clients."
