@@ -11,6 +11,7 @@ EvilOSX is a pure python, post-exploitation, RAT (Remote Administration Tool) fo
 * Retrieve iCloud contacts.
 * Attempt to get iCloud password via [phishing](http://i.imgur.com/wEqF5aa.png).
 * Show local iOS backups.
+* Download and upload files.
 * Retrieve find my iphone devices.
 * Attempt to get root via local privilege escalation (<= 10.10.5).
 * Auto installer, simply run EvilOSX on the target and the rest is handled automatically.
@@ -21,7 +22,7 @@ EvilOSX is a pure python, post-exploitation, RAT (Remote Administration Tool) fo
    ![](http://i.imgur.com/NQRPFXS.png)
 3. Done! Upload and execute the built EvilOSX on your target (with ./EvilOSX.py).
 4. Finally, start the Server (with ./Server.py) and start managing connections: <br/>
-   ![](http://i.imgur.com/kvwvE3e.png)
+   ![](http://i.imgur.com/CafyVrZ.png)
 
 ## Thanks
 * [OSXChromeDecrypt](https://github.com/manwhoami/OSXChromeDecrypt)  created by manwhoami
